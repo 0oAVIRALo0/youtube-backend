@@ -1,8 +1,9 @@
-import { asyncHandler } from "../utils/asyncHandler.js";
+Arrayimport { asyncHandler } from "../utils/asyncHandler.js";
 import { errorHandler } from "../utils/errorHandler.js";
 import { User } from "../models/user.model.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import { responseHandler } from "../utils/responseHandler.js";
+import jwt from "jsonwebtoken";
 
 const generateAccessAndRefreshToken = async (userId) => {
   try {
@@ -161,6 +162,191 @@ const loginUser = asyncHandler(async (req, res) => {
     );
 });
 
-const logoutUser = asyncHandler(async (req, res) => {});
+const logoutUser = asyncHandler(async (req, res) => {
+  const userId = req.user._id;
+  await User.findByIdAndUpdate(
+    userId,
+    {
+      $unset: {
+        refreshToken: 1,
+      },
+    },
+    { new: true }
+  );
 
-export { registerUser, loginUser };
+  const options = {
+    httpOnly: true,
+    secure: true,
+  };
+
+  return res
+    .status(200)
+    .clearCookie("accessToken", options)
+    .clearCookie("refreshToken", options)
+    .json(new responseHandler(200, {}, "User logged out successfully"));
+});
+
+const refreshAccessToken = asyncHandler(async (req, res) => {
+  const incomingRefreshToken =
+    req.cookies.refreshToken || req.body.refreshToken;
+
+  if (!incomingRefreshToken) {
+    throw new errorHandler(401, "Unauthorized request");
+  }
+
+  try {
+    const decodedToken = jwt.verify(
+      incomingRefreshToken,
+      process.env.REFRESH_TOKEN_SECRET
+    );
+
+    const userId = decodedToken._id;
+    const user = User.findById(userId);
+
+    if (!user) {
+      throw new errorHandler(401, "Invalid refresh token");
+    }
+
+    if (incomingRefreshToken !== user?.refreshToken) {
+      throw new errorHandler(401, "Refresh token is expired or used");
+    }
+
+    const options = {
+      httpOnly: true,
+      secure: true,
+    };
+
+    const { accessToken, refreshToken } = generateAccessAndRefreshToken(
+      user._id
+    );
+
+    return res
+      .status(200)
+      .cookie("accessToken", accessToken, options)
+      .cookie("refreshToken", refreshToken, options)
+      .json(
+        new responseHandler(
+          200,
+          { accessToken: accessToken, refreshToken: refreshToken },
+          "Access token refreshed"
+        )
+      );
+  } catch (error) {
+    throw new errorHandler(401, error?.message || "Invaluid refresh token");
+  }
+});
+
+const changeCurrentPassword = asyncHandler(async (req, res) => {
+  const { oldPassword, newPassword } = req.body;
+
+  const userId = req.user._id;
+  const user = await User.findById(userId);
+
+  const isPasswordCorrect = await user.isPasswordCorrect(oldPassword);
+
+  if (!isPasswordCorrect) {
+    throw new errorHandler(400, "Invalid old password");
+  }
+
+  user.password = newPassword;
+  await user.save({ ValidateBeforeSave: false });
+
+  return res
+    .status(200)
+    .json(new responseHandler(200, {}, "Password changes successfully"));
+});
+
+const getCurrectUser = asyncHandler(async (req, res) => {
+  return res
+    .status(200)
+    .json(new responseHandler(200, req.user, "User fetched successfully"));
+});
+
+const updateAccountDetails = asyncHandler(async (req, res) => {
+  const { fullName, email } = req.body;
+
+  if (!fullName || !email) {
+    throw new errorHandler(400, "All fields are required");
+  }
+
+  const userId = req.user._id;
+
+  const user = await User.findByIdAndUpdate(
+    userId,
+    {
+      $set: {
+        fullName: fullName,
+        email: email,
+      },
+    },
+    { new: true }
+  ).select("-password");
+
+  return res
+    .status(200)
+    .json(
+      new responseHandler(200, user, "Account details updated successfully")
+    );
+});
+
+const updateUserAvatar = asyncHandler(async (ewq, res) => {
+  const avatarLocalPath = req.files?.path;
+
+  if (!avatarLocalPath) {
+    throw new errorHandler(400, "Avatar file is missing");
+  }
+
+  const avatar = await uploadOnCloudinary(avatarLocalPath);
+
+  if (!avatar.url) {
+    throw new errorHandler(400, "Error while uplaoding on server.");
+  }
+
+  const userId = req.user._id;
+  const user = await User.findByIdAndUpdate(
+    userId,
+    { $set: { avatar: avatar.url } },
+    { new: true }
+  ).select("-password");
+
+  return res
+    .status(200)
+    .json(new responseHandler(200, user, "Avatar image updated successfuly"));
+});
+
+const updateUserCoverImage = asyncHandler(async (ewq, res) => {
+  const coverImageLocalPath = req.files?.path;
+
+  if (!coverImageLocalPath) {
+    throw new errorHandler(400, "Avatar file is missing");
+  }
+
+  const coverImage = await uploadOnCloudinary(coverImageLocalPath);
+
+  if (!coverImage.url) {
+    throw new errorHandler(400, "Error while uplaoding on server.");
+  }
+
+  const userId = req.user._id;
+  const user = await User.findByIdAndUpdate(
+    userId,
+    { $set: { coverImage: coverImage.url } },
+    { new: true }
+  ).select("-password");
+
+  return res
+    .status(200)
+    .json(new responseHandler(200, user, "Cover image updated successfuly"));
+});
+
+export {
+  registerUser,
+  loginUser,
+  logoutUser,
+  refreshAccessToken,
+  changeCurrentPassword,
+  getCurrectUser,
+  updateAccountDetails,
+  updateUserAvatar,
+  updateUserCoverImage,
+};

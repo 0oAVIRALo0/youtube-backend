@@ -29,3 +29,5 @@ export const verifyJWT = asyncHandler(async (req, res) => {
     throw new errorHandler(401, error?.message || "Invalid access token");
   }
 });
+
+export { verifyJWT };
