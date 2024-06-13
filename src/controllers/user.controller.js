@@ -34,7 +34,7 @@ const registerUser = asyncHandler(async (req, res) => {
   // check for user creation
   // return res
 
-  console.log(req.body);
+  // console.log(req.body);
 
   const { fullName, username, email, password } = req.body;
 
@@ -50,30 +50,30 @@ const registerUser = asyncHandler(async (req, res) => {
     throw new errorHandler(409, "User with email or username already exists.");
   }
 
-  console.log("files: ", req.files);
+  // console.log("files: ", req.files);
 
-  const avatarLocalpath = req.files?.avatar[0]?.path;
-  console.log(avatarLocalpath);
+  const avatarBuffer = req.files?.avatar[0]?.buffer;
+  // console.log(avatarBuffer);
 
-  let coverImageLocalpath;
+  let coverImageBuffer;
   if (
     req.files &&
     Array.isArray(req.files.coverImage) &&
     req.files.coverImage.length > 0
   ) {
-    coverImageLocalpath = req.files.coverImage[0].path;
+    coverImageBuffer = req.files.coverImage[0].buffer;
   }
 
-  console.log(coverImageLocalpath);
+  // console.log(coverImageBuffer);
 
-  if (!avatarLocalpath) {
+  if (!avatarBuffer) {
     throw new errorHandler(400, "Avatar file is required");
   }
 
-  const avatar = await uploadOnCloudinary(avatarLocalpath);
-  const coverImage = await uploadOnCloudinary(coverImageLocalpath);
+  const avatar = await uploadOnCloudinary(avatarBuffer);
+  const coverImage = await uploadOnCloudinary(coverImageBuffer);
 
-  console.log(avatar);
+  // console.log(avatar);
 
   if (!avatar.url) {
     throw new errorHandler(400, "Avatar file is required");
@@ -256,7 +256,7 @@ const changeCurrentPassword = asyncHandler(async (req, res) => {
     .json(new responseHandler(200, {}, "Password changes successfully"));
 });
 
-const getCurrectUser = asyncHandler(async (req, res) => {
+const getCurrentUser = asyncHandler(async (req, res) => {
   return res
     .status(200)
     .json(new responseHandler(200, req.user, "User fetched successfully"));
@@ -345,7 +345,7 @@ export {
   logoutUser,
   refreshAccessToken,
   changeCurrentPassword,
-  getCurrectUser,
+  getCurrentUser,
   updateAccountDetails,
   updateUserAvatar,
   updateUserCoverImage,
