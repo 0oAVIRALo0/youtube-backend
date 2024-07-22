@@ -289,7 +289,7 @@ const updateAccountDetails = asyncHandler(async (req, res) => {
     );
 });
 
-const updateUserAvatar = asyncHandler(async (ewq, res) => {
+const updateUserAvatar = asyncHandler(async (req, res) => {
   const avatarLocalPath = req.files?.path;
 
   if (!avatarLocalPath) {
@@ -314,7 +314,7 @@ const updateUserAvatar = asyncHandler(async (ewq, res) => {
     .json(new responseHandler(200, user, "Avatar image updated successfuly"));
 });
 
-const updateUserCoverImage = asyncHandler(async (ewq, res) => {
+const updateUserCoverImage = asyncHandler(async (req, res) => {
   const coverImageLocalPath = req.files?.path;
 
   if (!coverImageLocalPath) {
@@ -338,6 +338,8 @@ const updateUserCoverImage = asyncHandler(async (ewq, res) => {
     .status(200)
     .json(new responseHandler(200, user, "Cover image updated successfuly"));
 });
+
+const getUserChannelProfile = asyncHandler(async (req, res) => {});
 
 export {
   registerUser,
